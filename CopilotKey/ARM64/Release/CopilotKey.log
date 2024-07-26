@@ -1,0 +1,5 @@
+﻿  CopilotKey.cpp
+C:\Users\PCRepairTech\source\repos\CopilotKey\CopilotKey\CopilotKey.cpp(45,33): warning C4267: 'argument': conversion from 'size_t' to 'DWORD', possible loss of data
+  Generating code
+  Finished generating code
+  CopilotKey.vcxproj -> C:\Users\PCRepairTech\source\repos\CopilotKey\ARM64\Release\LaunchCopilot.exe
