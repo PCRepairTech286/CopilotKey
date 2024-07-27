@@ -31,8 +31,7 @@ int InstallProgram(HINSTANCE hInstance, LPCWSTR ExecutablePath, LPCWSTR InstallD
     );
 
     if (result != ERROR_SUCCESS) {
-        std::cerr << "Failed to open registry key: " << result << std::endl;
-        return 1;
+        return result;
     }
 
     // Write the value to the registry
@@ -46,11 +45,12 @@ int InstallProgram(HINSTANCE hInstance, LPCWSTR ExecutablePath, LPCWSTR InstallD
     );
 
     if (result != ERROR_SUCCESS) {
-        return 1;
+        return result;
     }
 
     // Close the registry key
     RegCloseKey(hKey);
+    
     return 0;
 }
 
@@ -76,6 +76,7 @@ int CopilotButton()
 // input event.
     INPUT ip[6] = {0};
 
+    // Press the Left Shift key
     ip[0].type = INPUT_KEYBOARD;
     ip[0].ki.wScan = 0; // hardware scan code for key
     ip[0].ki.time = 0;
@@ -99,6 +100,7 @@ int CopilotButton()
     ip[2].ki.wVk = VK_F23;
     ip[2].ki.dwFlags = 0; // 0 for key press
 
+    // Release all keys
     ip[3] = ip[2];
     ip[3].ki.dwFlags |= KEYEVENTF_KEYUP;
 
@@ -110,7 +112,6 @@ int CopilotButton()
 
     SendInput(6, ip, sizeof(INPUT));
 
-    // Exit normally
     return 0;
 }
 
@@ -150,10 +151,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     {
         TCHAR szExePath[MAX_PATH];
         GetModuleFileName(NULL, szExePath, MAX_PATH);
-
+            CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
         if (IsElevated() == FALSE)
         {
-            CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+
             WCHAR cd[MAX_PATH];
             GetCurrentDirectory(MAX_PATH, cd);
             SHELLEXECUTEINFO info = {0};
@@ -170,7 +171,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
                 FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                     NULL, ERROR_OPERATION_ABORTED, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                     buf, (sizeof(buf) / sizeof(WCHAR)), NULL);
-                MessageBox(NULL, buf, L"Error", MB_ICONERROR + MB_OK);
+                MessageBox(NULL, buf, L"Copilot Key Replacement - Install Error", MB_ICONERROR + MB_OK);
             return ERROR_OPERATION_ABORTED;
             }
             return ERROR_SUCCESS;
@@ -178,13 +179,24 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
         else {
                     LPWSTR ProgramDataFolder[MAX_PATH];
         SHGetKnownFolderPath(FOLDERID_ProgramData, NULL, GetCurrentProcessToken(), ProgramDataFolder);
-        InstallProgram(hInstance, szExePath, *ProgramDataFolder);
+        LONG res = InstallProgram(hInstance, szExePath, *ProgramDataFolder);
+        if (res != 0)
+        {
+            WCHAR buf[256];
+            FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                NULL, res, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                buf, (sizeof(buf) / sizeof(WCHAR)), NULL);
+            MessageBox(NULL, buf, L"Copilot Key Replacement - Install Error", MB_OK + MB_ICONERROR);
+            ExitProcess(res);
+        }
 
-        ExitProcess(GetLastError());
+        ExitProcess(ERROR_SUCCESS);
         }
 
     }
     else {
+
+
     address = LowLevelKeyboardProc;
         keyboard_hook = SetWindowsHookEx(WH_KEYBOARD_LL, address, hInstance, 0);
         // Keep this app running until we're told to stop
@@ -195,8 +207,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
         }
 
         UnhookWindowsHookEx(keyboard_hook);
-    return 0;
     }
     LocalFree(argv); // Free memory allocated by CommandLineToArgvW
-
+    return 0;
 }
